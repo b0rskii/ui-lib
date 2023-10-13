@@ -1,0 +1,11 @@
+.main-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.main-page__item {
+  margin-top: 20px;
+}
