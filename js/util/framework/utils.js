@@ -5,6 +5,8 @@ export const RenderPosition = {
   AFTEREND: 'afterend',
 };
 
+const firstCharToUpperCase = (str) => str[0].toUpperCase() + str.slice(1);
+
 export const createElement = (template) => {
   const newElement = document.createElement('div');
   newElement.innerHTML = template;
@@ -12,4 +14,11 @@ export const createElement = (template) => {
   return newElement.firstElementChild;
 };
 
-export const firstCharToUpperCase = (str) => str[0].toUpperCase() + str.slice(1);
+export const formatFromKebabToCamelCase = (kebabStr) => {
+  return kebabStr.split('-').map((word, i) => {
+    if (i !== 0) {
+      return firstCharToUpperCase(word);
+    }
+    return word;
+  }).join('');
+}

@@ -14,13 +14,13 @@ export class ButtonView extends Component {
     click: () => {},
   };
 
-  getTemplate = () => {
+  getTemplate() {
     return `
       <button ${this.uEl} class="button-view" :class="extClass" :content="content">
         {{ content }}
       </button>
     `;
-  };
+  }
 
   setHandlers() {
     this.element.addEventListener('click', this.handleClick);

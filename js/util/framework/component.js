@@ -1,4 +1,4 @@
-import { RenderPosition, createElement, firstCharToUpperCase } from './utils.js';
+import { RenderPosition, createElement, formatFromKebabToCamelCase } from './utils.js';
 
 export class Component {
   static id = 0;
@@ -19,6 +19,12 @@ export class Component {
   mountedComponents = new Map();
   structuralElements = [];
 
+  data = {
+    props: [],
+    dinamicProps: [],
+    callbacks: [],
+  };
+
   props = {};
   callback = {};
   state = {};
@@ -37,6 +43,8 @@ export class Component {
     Component.selectors = selectors.join(', ');
 
     componentTag.parentElement.replaceChild(this.element, componentTag);
+
+    this.afterMount();
     this.triggerChildComponents();
   }
 
@@ -44,7 +52,7 @@ export class Component {
     const componentTags = this.element.querySelectorAll(Component.selectors);
 
     componentTags.forEach((componentTag) => {
-      const ComponentClass = Component.components.get(componentTag.tagName.toLowerCase());
+      const ComponentClass = Component.components.get(componentTag.localName);
       const component = new ComponentClass();
       component.mount(componentTag, this);
 
@@ -56,23 +64,22 @@ export class Component {
     this.parentComponent = parentComponent;
     this.content = componentTag.textContent;
 
-    const { props, callback } = this.getPropsAndCallbacks(componentTag);
-
-    this.props = props;
-    this.callback = callback;
+    this.getPropsAndCallbacks(componentTag);
 
     const template = this.getTemplate();
     this.element = createElement(template);
     this.registerStructuralElements(componentTag);
-    this.update();
+    this.update(false);
 
     componentTag.parentElement.replaceChild(this.element, componentTag);
-    this.setHandlers();
 
+    this.setHandlers();
+    this.afterMount();
     this.triggerChildComponents();
   }
 
-  update() {
+  update(isMounted = true) {
+    this.updateProps();
     this.structuralUpdate();
 
     if (this.element.hasAttribute('data-u')) {
@@ -83,8 +90,18 @@ export class Component {
       this.updateAttrs(child);
     });
 
+    if (isMounted) this.afterUpdate();
+
     this.mountedComponents.forEach((mountedComponent) => {
       mountedComponent.update();
+    });
+  }
+
+  updateProps() {
+    this.data.props.forEach(([key, value]) => this.props[key] = value);
+
+    this.data.dinamicProps.forEach(([key, value]) => {
+      this.props[key] = this.parentComponent.props[value] ?? this.parentComponent.state[value];
     });
   }
 
@@ -118,13 +135,13 @@ export class Component {
       
       if (attr.name === ':content') {
         const newContent = attr.value;
-        el.textContent = this[newContent] ?? this.props[newContent] ?? this.state[newContent];
+        el.textContent = this.props[newContent] ?? this.state[newContent] ?? this[newContent];
         continue;
       }
 
       if (attr.name === ':class') {
         const addingClass = this.props[attr.value] ?? this.state[attr.value];
-        el.classList.add(addingClass);
+        if (addingClass.length) el.classList.add(addingClass);
         continue;
       }
 
@@ -138,34 +155,26 @@ export class Component {
   }
 
   getPropsAndCallbacks(componentTag) {
-    const attrs = {
-      props: {},
-      callback: {},
-    };
-
     for (let i = 0; i < componentTag.attributes.length; i++) {
       const attr = componentTag.attributes[i];
 
       if (attr.name.startsWith(':')) {
         const propName = attr.name.slice(1, attr.name.length);
-
-        const formatedPropName = propName.split('-').map((word, i) => {
-          if (i !== 0) {
-            return firstCharToUpperCase(word);
-          }
-          return word;
-        }).join('');
-
-        attrs.props[formatedPropName] = attr.value;
+        const camelCasePropName = formatFromKebabToCamelCase(propName);
+        this.data.dinamicProps.push([camelCasePropName, attr.value]);
+        continue;
       }
 
       if (attr.name.startsWith('@')) {
         const callbackName = attr.name.slice(1, attr.name.length);
-        attrs.callback[callbackName] = this.parentComponent[attr.value];
+        const camelCaseCallbackName = formatFromKebabToCamelCase(callbackName);
+        this.callback[camelCaseCallbackName] = this.parentComponent[attr.value];
+        continue;
       }
-    }
 
-    return attrs;
+      const camelCasePropName = formatFromKebabToCamelCase(attr.name);
+      this.data.props.push([camelCasePropName, attr.value]);
+    }
   }
 
   registerStructuralElements(componentTag) {
@@ -219,10 +228,16 @@ export class Component {
     }
   }
 
-  setState(state) {
-    this.state = state;
+  setState(callback) {
+    // console.time();
+
+    callback(this.state);
     this.update();
+
+    // console.timeEnd();
   }
 
   setHandlers() {}
+  afterMount() {}
+  afterUpdate() {}
 }
