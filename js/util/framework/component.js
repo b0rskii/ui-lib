@@ -30,10 +30,6 @@ export class Component {
   state = {};
 
   init() {
-    const componentTag = document.querySelector('app-root');
-    const template = this.getTemplate();
-    this.element = createElement(template);
-
     const selectors = [];
 
     this.components.forEach((componentClass) => {
@@ -42,10 +38,17 @@ export class Component {
     });
     Component.selectors = selectors.join(', ');
 
+    const componentTag = document.querySelector('app-root');
+    const template = this.getTemplate();
+    this.element = createElement(template);
+    this.registerStructuralElements(componentTag);
+    this.update(false);
+
     componentTag.parentElement.replaceChild(this.element, componentTag);
 
-    this.afterMount();
+    this.setHandlers();
     this.triggerChildComponents();
+    this.afterMount();
   }
 
   triggerChildComponents() {
@@ -55,7 +58,6 @@ export class Component {
       const ComponentClass = Component.components.get(componentTag.localName);
       const component = new ComponentClass();
       component.mount(componentTag, this);
-
       this.mountedComponents.set(component.id, component);
     });
   }
@@ -74,8 +76,8 @@ export class Component {
     componentTag.parentElement.replaceChild(this.element, componentTag);
 
     this.setHandlers();
-    this.afterMount();
     this.triggerChildComponents();
+    this.afterMount();
   }
 
   update(isMounted = true) {
@@ -90,11 +92,11 @@ export class Component {
       this.updateAttrs(child);
     });
 
-    if (isMounted) this.afterUpdate();
-
     this.mountedComponents.forEach((mountedComponent) => {
       mountedComponent.update();
     });
+
+    if (isMounted) this.afterUpdate();
   }
 
   updateProps() {
@@ -229,12 +231,12 @@ export class Component {
   }
 
   setState(callback) {
-    // console.time();
+    console.time();
 
     callback(this.state);
     this.update();
 
-    // console.timeEnd();
+    console.timeEnd();
   }
 
   setHandlers() {}

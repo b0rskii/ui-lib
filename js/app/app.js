@@ -4,11 +4,7 @@ import { ButtonView } from '../view/button-view.js';
 
 export class App extends Component {
   static selector = 'app-root';
-
-  components = [
-    CounterView,
-    ButtonView,
-  ];
+  components = [CounterView, ButtonView];
 
   constructor() {
     super();
@@ -18,23 +14,38 @@ export class App extends Component {
     count: 0,
   };
 
-  getTemplate() {
-    return `
-      <div class="main-page">
-        <counter-view
-          ext-class="main-page__item"
-          :count="count"
-          @decrement="handleDecrementButtonClick"
-          @increment="handleIncrementButtonClick"
-        ></counter-view>
-        <counter-view ext-class="main-page__item"></counter-view>
-        <counter-view ext-class="main-page__item"></counter-view>
+  lessThanZero = () => this.state.count < 0;
 
-        <button-view ext-class="main-page__item" @click="handleResetButtonClick">
+  getTemplate() {
+    return /* html */`
+      <div class="main-page">
+        <div data-if="lessThanZero" ${this.uEl}>
+          //////////////////////////////////////////
+        </div>
+
+        <counter-view
+          class="main-page__item"
+          :count="count"
+          @decrement-button-click="handleDecrementButtonClick"
+          @increment-button-click="handleIncrementButtonClick"
+        ></counter-view>
+
+        <counter-view class="main-page__item"></counter-view>
+        <counter-view class="main-page__item"></counter-view>
+
+        <button-view class="main-page__item" @click="handleResetButtonClick">
           Reset
         </button-view>
       </div>
     `;
+  }
+
+  afterMount() {
+    // console.log(`Компонент App вмонтирован`);
+  }
+
+  afterUpdate() {
+    // console.log(`Компонент App обновлен`);
   }
 
   handleDecrementButtonClick = () => {

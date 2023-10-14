@@ -8,12 +8,12 @@ export class CounterView extends Component {
   }
 
   props = {
-    extClass: '',
+    class: '',
     count: null,
   };
   callback = {
-    decrement: null,
-    increment: null,
+    decrementButtonClick: null,
+    incrementButtonClick: null,
   };
 
   state = {
@@ -30,19 +30,27 @@ export class CounterView extends Component {
   };
 
   getTemplate() {
-    return `
-      <div ${this.uEl} class="counter-view" :class="extClass">
-        <div ${this.uEl} :content="count" class="counter-view__value">
+    return /* html */`
+      <div class="counter-view" :class="class" ${this.uEl}>
+        <div :content="count" class="counter-view__value" ${this.uEl}>
           {{ count }}
         </div>
-        <div ${this.uEl} data-if="moreThanZero">Больше ноля!</div>
+        <div data-if="moreThanZero" ${this.uEl}>Больше ноля!</div>
         <div class="counter-view__buttons">
           <button-view @click="handleIDecButtonClick">-</button-view>
           <button-view @click="handleIncButtonClick">+</button-view>
         </div>
-        <div ${this.uEl} data-if="moreThanFive">Больше пяти!</div>
+        <div data-if="moreThanFive" ${this.uEl}>Больше пяти!</div>
       </div>
     `;
+  }
+
+  afterMount() {
+    // console.log(`Компонент CounterView вмонтирован`);
+  }
+
+  afterUpdate() {
+    // console.log(`Компонент CounterView обновлен`);
   }
 
   resetCounter = () => {
@@ -50,16 +58,16 @@ export class CounterView extends Component {
   };
 
   handleIDecButtonClick = () => {
-    if (this.callback.decrement) {
-      this.callback.decrement();
+    if (this.callback.decrementButtonClick) {
+      this.callback.decrementButtonClick();
       return;
     }
     this.setState(s => s.count--);
   };
 
   handleIncButtonClick = () => {
-    if (this.callback.decrement) {
-      this.callback.increment();
+    if (this.callback.incrementButtonClick) {
+      this.callback.incrementButtonClick();
       return;
     }
     this.setState(s => s.count++);

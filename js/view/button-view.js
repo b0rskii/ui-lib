@@ -8,18 +8,26 @@ export class ButtonView extends Component {
   }
 
   props = {
-    extClass: '',
+    class: '',
   };
   callback = {
     click: () => {},
   };
 
   getTemplate() {
-    return `
-      <button ${this.uEl} class="button-view" :class="extClass" :content="content">
+    return /* html */`
+      <button class="button-view" :class="class" :content="content" ${this.uEl}>
         {{ content }}
       </button>
     `;
+  }
+
+  afterMount() {
+    // console.log(`Компонент ButtonView вмонтирован`);
+  }
+
+  afterUpdate() {
+    // console.log(`Компонент ButtonView обновлен`);
   }
 
   setHandlers() {
