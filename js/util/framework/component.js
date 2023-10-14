@@ -41,13 +41,14 @@ export class Component {
     const componentTag = document.querySelector('app-root');
     const template = this.getTemplate();
     this.element = createElement(template);
+
+    this.triggerChildComponents();
     this.registerStructuralElements(componentTag);
     this.update(false);
 
     componentTag.parentElement.replaceChild(this.element, componentTag);
 
     this.setHandlers();
-    this.triggerChildComponents();
     this.afterMount();
   }
 
@@ -70,13 +71,14 @@ export class Component {
 
     const template = this.getTemplate();
     this.element = createElement(template);
+
+    this.triggerChildComponents();
     this.registerStructuralElements(componentTag);
     this.update(false);
 
     componentTag.parentElement.replaceChild(this.element, componentTag);
 
     this.setHandlers();
-    this.triggerChildComponents();
     this.afterMount();
   }
 
@@ -92,11 +94,13 @@ export class Component {
       this.updateAttrs(child);
     });
 
-    this.mountedComponents.forEach((mountedComponent) => {
-      mountedComponent.update();
-    });
-
-    if (isMounted) this.afterUpdate();
+    if (isMounted) {
+      this.mountedComponents.forEach((mountedComponent) => {
+        mountedComponent.update();
+      });
+  
+      this.afterUpdate();
+    }
   }
 
   updateProps() {

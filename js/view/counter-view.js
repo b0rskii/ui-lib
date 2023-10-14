@@ -9,7 +9,7 @@ export class CounterView extends Component {
 
   props = {
     class: '',
-    count: null,
+    count: null, //number
   };
   callback = {
     decrementButtonClick: null,
@@ -32,7 +32,7 @@ export class CounterView extends Component {
   getTemplate() {
     return /* html */`
       <div class="counter-view" :class="class" ${this.uEl}>
-        <div :content="count" class="counter-view__value" ${this.uEl}>
+        <div class="counter-view__value" :content="count" ${this.uEl}>
           {{ count }}
         </div>
         <div data-if="moreThanZero" ${this.uEl}>Больше ноля!</div>

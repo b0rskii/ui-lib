@@ -14,15 +14,11 @@ export class App extends Component {
     count: 0,
   };
 
-  lessThanZero = () => this.state.count < 0;
+  moreThanZero = () => this.state.count > 0;
 
   getTemplate() {
     return /* html */`
       <div class="main-page">
-        <div data-if="lessThanZero" ${this.uEl}>
-          //////////////////////////////////////////
-        </div>
-
         <counter-view
           class="main-page__item"
           :count="count"
@@ -30,12 +26,14 @@ export class App extends Component {
           @increment-button-click="handleIncrementButtonClick"
         ></counter-view>
 
-        <counter-view class="main-page__item"></counter-view>
-        <counter-view class="main-page__item"></counter-view>
+        <div data-if="moreThanZero" ${this.uEl}>
+          <button-view class="main-page__item" @click="handleResetButtonClick">
+            Reset
+          </button-view>
+        </div>
 
-        <button-view class="main-page__item" @click="handleResetButtonClick">
-          Reset
-        </button-view>
+        <counter-view class="main-page__item"></counter-view>
+        <counter-view class="main-page__item"></counter-view>
       </div>
     `;
   }
@@ -58,9 +56,5 @@ export class App extends Component {
 
   handleResetButtonClick = () => {
     this.setState(s => s.count = 0);
-
-    this.mountedComponents.forEach((component) => {
-      component.resetCounter?.();
-    });
   };
 }

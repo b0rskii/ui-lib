@@ -11,7 +11,7 @@ export class ButtonView extends Component {
     class: '',
   };
   callback = {
-    click: () => {},
+    click: null,
   };
 
   getTemplate() {
