@@ -41,6 +41,7 @@ export class Component {
     const componentTag = document.querySelector('app-root');
     const template = this.getTemplate();
     this.element = createElement(template);
+    this.markUpdatableElements();
 
     this.triggerChildComponents();
     this.registerStructuralElements(componentTag);
@@ -50,6 +51,32 @@ export class Component {
 
     this.setHandlers();
     this.afterMount();
+  }
+
+  markUpdatableElements() {
+    this.checkAndMarkElement(this.element);
+
+    this.element.querySelectorAll('*').forEach((el) => {
+      if (el.localName.includes('-')) {
+        return;
+      }
+      this.checkAndMarkElement(el);
+    });
+  }
+
+  checkAndMarkElement(el) {
+    if (el.textContent.startsWith('{{')) {
+      this.markElement(el);
+    } else {
+      for (let i = 0; i < el.attributes.length; i++) {
+        const attr = el.attributes[i];
+
+        if (attr.name[0] === ':') {
+          this.markElement(el);
+          break;
+        }
+      }
+    }
   }
 
   triggerChildComponents() {
@@ -71,6 +98,7 @@ export class Component {
 
     const template = this.getTemplate();
     this.element = createElement(template);
+    this.markUpdatableElements();
 
     this.triggerChildComponents();
     this.registerStructuralElements(componentTag);
@@ -232,6 +260,10 @@ export class Component {
         position: RenderPosition.AFTEREND,
       };
     }
+  }
+
+  markElement(el) {
+    el.setAttribute('data-u', this.id);
   }
 
   setState(callback) {

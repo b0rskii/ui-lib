@@ -31,16 +31,16 @@ export class CounterView extends Component {
 
   getTemplate() {
     return /* html */`
-      <div class="counter-view" :class="class" ${this.uEl}>
-        <div class="counter-view__value" :content="count" ${this.uEl}>
+      <div class="counter-view" :class="class">
+        <div class="counter-view__value" :content="count">
           {{ count }}
         </div>
-        <div data-if="moreThanZero" ${this.uEl}>Больше ноля!</div>
+        <div data-if="moreThanZero">Больше ноля!</div>
         <div class="counter-view__buttons">
           <button-view @click="handleIDecButtonClick">-</button-view>
           <button-view @click="handleIncButtonClick">+</button-view>
         </div>
-        <div data-if="moreThanFive" ${this.uEl}>Больше пяти!</div>
+        <div data-if="moreThanFive">Больше пяти!</div>
       </div>
     `;
   }

@@ -26,7 +26,7 @@ export class App extends Component {
           @increment-button-click="handleIncrementButtonClick"
         ></counter-view>
 
-        <div data-if="moreThanZero" ${this.uEl}>
+        <div data-if="moreThanZero">
           <button-view class="main-page__item" @click="handleResetButtonClick">
             Reset
           </button-view>

@@ -16,7 +16,7 @@ export class ButtonView extends Component {
 
   getTemplate() {
     return /* html */`
-      <button class="button-view" :class="class" :content="content" ${this.uEl}>
+      <button class="button-view" :class="class" :content="content">
         {{ content }}
       </button>
     `;
