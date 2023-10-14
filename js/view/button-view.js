@@ -16,7 +16,12 @@ export class ButtonView extends Component {
 
   getTemplate() {
     return /* html */`
-      <button class="button-view" :class="class" :content="content">
+      <button
+        class="button-view"
+        :class="class"
+        :content="content"
+        @click="handleClick"
+      >
         {{ content }}
       </button>
     `;
@@ -28,10 +33,6 @@ export class ButtonView extends Component {
 
   afterUpdate() {
     // console.log(`Компонент ButtonView обновлен`);
-  }
-
-  setHandlers() {
-    this.element.addEventListener('click', this.handleClick);
   }
 
   handleClick = () => {

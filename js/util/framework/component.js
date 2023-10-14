@@ -6,11 +6,9 @@ export class Component {
   static selectors = '';
 
   id = '';
-  uEl = '';
 
   constructor() {
     this.id = Component.id;
-    this.uEl = `data-u="${this.id}"`;
     Component.id++;
   }
 
@@ -66,14 +64,17 @@ export class Component {
 
   checkAndMarkElement(el) {
     if (el.textContent.startsWith('{{')) {
-      this.markElement(el);
+      this.markUpdatableElement(el);
     } else {
       for (let i = 0; i < el.attributes.length; i++) {
         const attr = el.attributes[i];
 
         if (attr.name[0] === ':') {
-          this.markElement(el);
-          break;
+          this.markUpdatableElement(el);
+        }
+
+        if (attr.name[0] === '@') {
+          this.markEventElement(el);
         }
       }
     }
@@ -262,8 +263,12 @@ export class Component {
     }
   }
 
-  markElement(el) {
+  markUpdatableElement(el) {
     el.setAttribute('data-u', this.id);
+  }
+
+  markEventElement(el) {
+    el.setAttribute('data-e', this.id);
   }
 
   setState(callback) {
@@ -275,7 +280,28 @@ export class Component {
     console.timeEnd();
   }
 
-  setHandlers() {}
+  setHandlers() {
+    if (this.element.hasAttribute('data-e')) {
+      this.setElementHandlers(this.element);
+    }
+
+    this.element.querySelectorAll(`[data-e="${this.id}"]`).forEach((el) => {
+      this.setElementHandlers(el);
+    });
+  }
+
+  setElementHandlers(el) {
+    for (let i = 0; i < el.attributes.length; i++) {
+      const attr = el.attributes[i];
+
+      if (attr.name[0] === '@') {
+        el.addEventListener(`${attr.name.slice(1)}`, this[attr.value]);
+      }
+    }
+
+    el.removeAttribute('data-e');
+  }
+
   afterMount() {}
   afterUpdate() {}
 }
