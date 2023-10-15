@@ -1,4 +1,4 @@
-import { RenderPosition, createElement, formatFromKebabToCamelCase } from './utils.js';
+import { RenderPosition, createElement, formatFromKebabToCamelCase, getId } from './utils.js';
 
 export class Component {
   static id = 0;
@@ -67,9 +67,8 @@ export class Component {
       };
       
       if (el.hasAttribute('data-if')) {
-        const { container, position } = this.#getElementPlaceData(el);
-        updatable.container = container;
-        updatable.position = position;
+        const placeData = this.#getElementPlaceData(el);
+        updatable.placeData = placeData;
         updatable.condition = el.dataset.if;
       }
 
@@ -83,13 +82,12 @@ export class Component {
     let isUpdatable = false;
 
     const updatable = {
-      el: el,
+      el,
     };
 
     if (el.hasAttribute('data-if')) {
-      const { container, position } = this.#getElementPlaceData(el);
-      updatable.container = container;
-      updatable.position = position;
+      const placeData = this.#getElementPlaceData(el);
+      updatable.placeData = placeData;
       updatable.condition = el.dataset.if;
       updatable.elMounted = true,
       isUpdatable = true;
@@ -133,7 +131,7 @@ export class Component {
     return { ...this.#data, callback: this.callback, content: this.content };
   }
 
-  #mount(parentComponent, container, position, data) {
+  #mount(parentComponent, placeData, data) {
     this.#parentComponent = parentComponent;
 
     const template = this.getTemplate();
@@ -146,9 +144,7 @@ export class Component {
 
     this.#prepareUpdatables();
     this.#update(false);
-
-    container.insertAdjacentElement(position, this.#element);
-
+    this.#defunePositionAndMount(this.#element, this.#parentComponent.#element, placeData);
     this.#setHandlers();
     this.afterMount();
   }
@@ -162,8 +158,7 @@ export class Component {
       Class,
       el,
       elMounted,
-      container,
-      position,
+      placeData,
       condition,
     }, i) => {
       const currentUpdatable = this.#updatables[i];
@@ -179,7 +174,7 @@ export class Component {
           }
           if (shouldBeInDom && !component) {
             const component = new Class();
-            component.#mount(this, container, position, data);
+            component.#mount(this, placeData, data);
             currentUpdatable.component = component;
           }
           if (!shouldBeInDom && component) {
@@ -201,7 +196,7 @@ export class Component {
           this.#updateAttrs(el);
         }
         if (shouldBeInDom && !elMounted) {
-          container.insertAdjacentElement(position, el);
+          this.#defunePositionAndMount(el, this.#element, placeData);
           currentUpdatable.elMounted = true;
         }
         if (!shouldBeInDom && elMounted) {
@@ -212,6 +207,23 @@ export class Component {
     });
 
     if (needTriggerLifeCycle) this.afterUpdate(); 
+  }
+
+  #defunePositionAndMount(el, parent, placeData) {
+    for (const place of placeData) {
+      let container;
+
+      if (typeof place.container === 'object') {
+        container = place.container;
+      } else {
+        container = parent.querySelector(`#${place.container}`);
+      }
+
+      if (container) {
+        container.insertAdjacentElement(place.position, el);
+        break;
+      }
+    }
   }
 
   #updateProps() {
@@ -271,24 +283,57 @@ export class Component {
   }
 
   #getElementPlaceData(element) {
+    const placeData = [];
+    this.#defineElementPlaceData(element, placeData);
+    return placeData;
+  }
+
+  #defineElementPlaceData(element, placeData) {
     const prevElSibling = element.previousElementSibling;
+    const nextElSibling = element.nextElementSibling;
 
     if (!prevElSibling) {
-      return {
+      placeData.push({
         container: element.parentElement,
         position: RenderPosition.AFTERBEGIN,
-      };
+      });
+      return;
+    }
+
+    if (!nextElSibling) {
+      placeData.push({
+        container: element.parentElement,
+        position: RenderPosition.BEFOREEND,
+      });
+      return;
     }
 
     const prevElHasNoIf = !prevElSibling.hasAttribute('data-if');
     const prevElHasNoFor = !prevElSibling.hasAttribute('data-for');
 
-    if (prevElHasNoIf && prevElHasNoFor) {
-      return {
-        container: prevElSibling,
-        position: RenderPosition.AFTEREND,
-      };
+    let id = '';
+
+    if (!prevElSibling.hasAttribute('id')) {
+      id = getId('el_');
+      prevElSibling.setAttribute('id', id);
+    } else {
+      id = prevElSibling.getAttribute('id');
     }
+
+    if (prevElHasNoIf && prevElHasNoFor) {
+      placeData.push({
+        container: id,
+        position: RenderPosition.AFTEREND,
+      });
+      return;
+    }
+
+    placeData.push({
+      container: id,
+      position: RenderPosition.AFTEREND,
+    });
+
+    this.#defineElementPlaceData(prevElSibling, placeData);
   }
 
   #markEventElement(el) {

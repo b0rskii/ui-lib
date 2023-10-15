@@ -22,3 +22,6 @@ export const formatFromKebabToCamelCase = (kebabStr) => {
     return word;
   }).join('');
 }
+
+let count = 0;
+export const getId = (prefix) => `${prefix}${count++}`;

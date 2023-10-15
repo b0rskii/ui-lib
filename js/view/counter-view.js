@@ -20,13 +20,25 @@ export class CounterView extends Component {
     count: 0,
   };
 
-  moreThanZero = () => {
-    if (this.props.count !== null) return this.props.count > 0;
-    return this.state.count > 0;
+  moreThan1 = () => {
+    if (this.props.count !== null) return this.props.count > 1;
+    return this.state.count > 1;
   };
-  moreThanFive = () => {
+  moreThan5 = () => {
     if (this.props.count !== null) return this.props.count > 5;
     return this.state.count > 5;
+  };
+  moreThan2 = () => {
+    if (this.props.count !== null) return this.props.count > 2;
+    return this.state.count > 2;
+  };
+  lessThan0 = () => {
+    if (this.props.count !== null) return this.props.count < 0;
+    return this.state.count < 0;
+  };
+  moreThan3 = () => {
+    if (this.props.count !== null) return this.props.count > 3;
+    return this.state.count > 3;
   };
 
   getTemplate() {
@@ -35,12 +47,15 @@ export class CounterView extends Component {
         <div class="counter-view__value" :content="count">
           {{ count }}
         </div>
-        <div data-if="moreThanZero">Больше ноля!</div>
         <div class="counter-view__buttons">
           <button-view @click="handleIDecButtonClick">-</button-view>
           <button-view @click="handleIncButtonClick">+</button-view>
         </div>
-        <div data-if="moreThanFive">Больше пяти!</div>
+        <div data-if="moreThan1">Номер 1</div>
+        <div data-if="moreThan5">Номер 2</div>
+        <div data-if="moreThan2">Номер 3</div>
+        <div data-if="lessThan0">Номер 4</div>
+        <div data-if="moreThan3">Номер 5</div>
       </div>
     `;
   }
@@ -56,10 +71,6 @@ export class CounterView extends Component {
   // beforeUnmount() {
   //   console.log('beforeUnmount', this);
   // }
-
-  resetCounter = () => {
-    this.setState(s => s.count = 0);
-  };
 
   handleIDecButtonClick = () => {
     if (this.callback.decrementButtonClick) {
