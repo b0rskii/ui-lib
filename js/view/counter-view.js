@@ -45,13 +45,17 @@ export class CounterView extends Component {
     `;
   }
 
-  afterMount() {
-    // console.log(`Компонент CounterView вмонтирован`);
-  }
+  // afterMount() {
+  //   console.log('afterMount', this);
+  // }
 
-  afterUpdate() {
-    // console.log(`Компонент CounterView обновлен`);
-  }
+  // afterUpdate() {
+  //   console.log('afterUpdate', this);
+  // }
+
+  // beforeUnmount() {
+  //   console.log('beforeUnmount', this);
+  // }
 
   resetCounter = () => {
     this.setState(s => s.count = 0);

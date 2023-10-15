@@ -27,13 +27,17 @@ export class ButtonView extends Component {
     `;
   }
 
-  afterMount() {
-    // console.log(`Компонент ButtonView вмонтирован`);
-  }
+  // afterMount() {
+  //   console.log('afterMount', this);
+  // }
 
-  afterUpdate() {
-    // console.log(`Компонент ButtonView обновлен`);
-  }
+  // afterUpdate() {
+  //   console.log('afterUpdate', this);
+  // }
+
+  // beforeUnmount() {
+  //   console.log('beforeUnmount', this);
+  // }
 
   handleClick = () => {
     this.callback.click?.();

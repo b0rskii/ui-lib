@@ -14,13 +14,11 @@ export class Component {
 
   #element = null;
   #parentComponent = null;
-  #mountedComponents = new Map();
-  #structuralElements = [];
+  #updatables = [];
 
   #data = {
     props: [],
     dinamicProps: [],
-    callbacks: [],
   };
 
   props = {};
@@ -41,9 +39,7 @@ export class Component {
     const template = this.getTemplate();
     this.#element = createElement(template);
 
-    this.#markUpdatableElements();
-    this.#triggerChildComponents();
-    this.#registerStructuralElements(componentTag);
+    this.#prepareUpdatables();
     this.#update(false);
 
     componentTag.parentElement.replaceChild(this.#element, componentTag);
@@ -52,26 +48,61 @@ export class Component {
     this.afterMount();
   }
 
-  #markUpdatableElements() {
-    this.#checkAndMarkElement(this.#element);
+  #prepareUpdatables() {
+    this.#checkAndPrepareUpdatable(this.#element);
 
     this.#element.querySelectorAll('*').forEach((el) => {
-      if (el.localName.includes('-')) {
-        return;
-      }
-      this.#checkAndMarkElement(el);
+      this.#checkAndPrepareUpdatable(el);
     });
   }
 
-  #checkAndMarkElement(el) {
+  #checkAndPrepareUpdatable(el) {
+    if (el.localName.includes('-')) {
+      const ComponentClass = Component.components.get(el.localName);
+      const component = new ComponentClass();
+
+      const updatable = {
+        Class: ComponentClass,
+        component,
+      };
+      
+      if (el.hasAttribute('data-if')) {
+        const { container, position } = this.#getElementPlaceData(el);
+        updatable.container = container;
+        updatable.position = position;
+        updatable.condition = el.dataset.if;
+      }
+
+      const data = component.#initialMount(el, this);
+      updatable.data = data;
+
+      this.#updatables.push(updatable);
+      return;
+    }
+
+    let isUpdatable = false;
+
+    const updatable = {
+      el: el,
+    };
+
+    if (el.hasAttribute('data-if')) {
+      const { container, position } = this.#getElementPlaceData(el);
+      updatable.container = container;
+      updatable.position = position;
+      updatable.condition = el.dataset.if;
+      updatable.elMounted = true,
+      isUpdatable = true;
+    }
+
     if (el.textContent.startsWith('{{')) {
-      this.#markUpdatableElement(el);
+      isUpdatable = true;
     } else {
       for (let i = 0; i < el.attributes.length; i++) {
         const attr = el.attributes[i];
 
         if (attr.name[0] === ':') {
-          this.#markUpdatableElement(el);
+          isUpdatable = true;
         }
 
         if (attr.name[0] === '@') {
@@ -79,58 +110,108 @@ export class Component {
         }
       }
     }
+
+    if (isUpdatable) this.#updatables.push(updatable);
   }
 
-  #triggerChildComponents() {
-    const componentTags = this.#element.querySelectorAll(Component.selectors);
-
-    componentTags.forEach((componentTag) => {
-      const ComponentClass = Component.components.get(componentTag.localName);
-      const component = new ComponentClass();
-      component.#mount(componentTag, this);
-      this.#mountedComponents.set(component.#id, component);
-    });
-  }
-
-  #mount(componentTag, parentComponent) {
+  #initialMount(componentTag, parentComponent) {
     this.#parentComponent = parentComponent;
     this.content = componentTag.textContent;
-
-    this.#getPropsAndCallbacks(componentTag);
 
     const template = this.getTemplate();
     this.#element = createElement(template);
 
-    this.#markUpdatableElements();
-    this.#triggerChildComponents();
-    this.#registerStructuralElements(componentTag);
+    this.#getPropsAndCallbacks(componentTag);
+    this.#prepareUpdatables();
     this.#update(false);
 
     componentTag.parentElement.replaceChild(this.#element, componentTag);
 
     this.#setHandlers();
     this.afterMount();
+
+    return { ...this.#data, callback: this.callback, content: this.content };
   }
 
-  #update(isMounted = true) {
+  #mount(parentComponent, container, position, data) {
+    this.#parentComponent = parentComponent;
+
+    const template = this.getTemplate();
+    this.#element = createElement(template);
+
+    this.#data.props = data.props;
+    this.#data.dinamicProps = data.dinamicProps;
+    this.callback = data.callback;
+    this.content = data.content;
+
+    this.#prepareUpdatables();
+    this.#update(false);
+
+    container.insertAdjacentElement(position, this.#element);
+
+    this.#setHandlers();
+    this.afterMount();
+  }
+
+  #update(needTriggerLifeCycle = true) {
     this.#updateProps();
-    this.#structuralUpdate();
 
-    if (this.#element.hasAttribute('data-u')) {
-      this.#updateAttrs(this.#element);
-    }
+    this.#updatables.forEach(({
+      component,
+      data,
+      Class,
+      el,
+      elMounted,
+      container,
+      position,
+      condition,
+    }, i) => {
+      const currentUpdatable = this.#updatables[i];
+      
+      if (Class) {
+        if (condition === undefined) {
+          component.#update(needTriggerLifeCycle);
+        } else {
+          const shouldBeInDom = this[condition]();
 
-    this.#element.querySelectorAll(`[data-u="${this.#id}"]`).forEach((child) => {
-      this.#updateAttrs(child);
+          if (shouldBeInDom && component) {
+            component.#update(needTriggerLifeCycle);
+          }
+          if (shouldBeInDom && !component) {
+            const component = new Class();
+            component.#mount(this, container, position, data);
+            currentUpdatable.component = component;
+          }
+          if (!shouldBeInDom && component) {
+            if (needTriggerLifeCycle) component.beforeUnmount();
+            component.#element.remove();
+            currentUpdatable.component = null;
+          }
+        }
+
+        return;
+      }
+
+      if (condition === undefined) {
+        this.#updateAttrs(el);
+      } else {
+        const shouldBeInDom = this[condition]();
+
+        if (shouldBeInDom && elMounted) {
+          this.#updateAttrs(el);
+        }
+        if (shouldBeInDom && !elMounted) {
+          container.insertAdjacentElement(position, el);
+          currentUpdatable.elMounted = true;
+        }
+        if (!shouldBeInDom && elMounted) {
+          el.remove();
+          currentUpdatable.elMounted = false;
+        }
+      }
     });
 
-    if (isMounted) {
-      this.#mountedComponents.forEach((mountedComponent) => {
-        mountedComponent.#update();
-      });
-  
-      this.afterUpdate();
-    }
+    if (needTriggerLifeCycle) this.afterUpdate(); 
   }
 
   #updateProps() {
@@ -138,30 +219,6 @@ export class Component {
 
     this.#data.dinamicProps.forEach(([key, value]) => {
       this.props[key] = this.#parentComponent.props[value] ?? this.#parentComponent.state[value];
-    });
-  }
-
-  #structuralUpdate() {
-    this.#structuralElements.forEach((data, i) => {
-      const { el, isComponent, isMounted, container, position, condition } = data;
-      const shouldBeInDom = this[condition]();
-
-      if (isMounted && !shouldBeInDom) {
-        if (isComponent) {
-          // TODO
-        } else {
-          el.remove();
-          this.#structuralElements[i].isMounted = false;
-        }
-      }
-      if (!isMounted && shouldBeInDom) {
-        if (isComponent) {
-          // TODO
-        } else {
-          container.insertAdjacentElement(position, el);
-          this.#structuralElements[i].isMounted = true;
-        }
-      }
     });
   }
 
@@ -213,36 +270,6 @@ export class Component {
     }
   }
 
-  #registerStructuralElements(componentTag) {
-    if (this.#element.hasAttribute('data-if')) {
-      const { container, position } = this.#getElementPlaceData(componentTag);
-      const condition = this.#element.dataset.if;
-
-      this.#structuralElements.push({
-        el: this.#element,
-        isComponent: true,
-        isMounted: true,
-        container,
-        position,
-        condition,
-      });
-    }
-
-    this.#element.querySelectorAll('[data-if]').forEach((ifElement) => {
-      const { container, position } = this.#getElementPlaceData(ifElement);
-      const condition = ifElement.dataset.if;
-
-      this.#structuralElements.push({
-        el: ifElement,
-        isComponent: false,
-        isMounted: true,
-        container,
-        position,
-        condition,
-      });
-    });
-  }
-
   #getElementPlaceData(element) {
     const prevElSibling = element.previousElementSibling;
 
@@ -262,10 +289,6 @@ export class Component {
         position: RenderPosition.AFTEREND,
       };
     }
-  }
-
-  #markUpdatableElement(el) {
-    el.setAttribute('data-u', this.#id);
   }
 
   #markEventElement(el) {
@@ -307,4 +330,5 @@ export class Component {
 
   afterMount() {}
   afterUpdate() {}
+  beforeUnmount() {}
 }

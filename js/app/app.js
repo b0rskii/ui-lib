@@ -26,11 +26,13 @@ export class App extends Component {
           @increment-button-click="handleIncrementButtonClick"
         ></counter-view>
 
-        <div data-if="moreThanZero">
-          <button-view class="main-page__item" @click="handleResetButtonClick">
-            Reset
-          </button-view>
-        </div>
+        <button-view
+          data-if="moreThanZero"
+          class="main-page__item"
+          @click="handleResetButtonClick"
+        >
+          Reset
+        </button-view>
 
         <counter-view class="main-page__item"></counter-view>
         <counter-view class="main-page__item"></counter-view>
@@ -38,13 +40,17 @@ export class App extends Component {
     `;
   }
 
-  afterMount() {
-    // console.log(`Компонент App вмонтирован`);
-  }
+  // afterMount() {
+  //   console.log('afterMount', this);
+  // }
 
-  afterUpdate() {
-    // console.log(`Компонент App обновлен`);
-  }
+  // afterUpdate() {
+  //   console.log('afterUpdate', this);
+  // }
+
+  // beforeUnmount() {
+  //   console.log('beforeUnmount', this);
+  // }
 
   handleDecrementButtonClick = () => {
     this.setState(s => s.count--);
