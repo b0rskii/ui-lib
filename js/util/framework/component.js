@@ -19,6 +19,7 @@ export class Component {
   #data = {
     props: [],
     dinamicProps: [],
+    attrs: [],
   };
 
   props = {};
@@ -39,8 +40,8 @@ export class Component {
     const template = this.getTemplate();
     this.#element = createElement(template);
 
-    this.#prepareUpdatables();
-    this.#update(false);
+    this.#renderTree();
+    this.#update(true);
 
     componentTag.parentElement.replaceChild(this.#element, componentTag);
 
@@ -48,15 +49,15 @@ export class Component {
     this.afterMount();
   }
 
-  #prepareUpdatables() {
-    this.#checkAndPrepareUpdatable(this.#element);
+  #renderTree() {
+    this.#renderNode(this.#element);
 
     this.#element.querySelectorAll('*').forEach((el) => {
-      this.#checkAndPrepareUpdatable(el);
+      this.#renderNode(el);
     });
   }
 
-  #checkAndPrepareUpdatable(el) {
+  #renderNode(el) {
     if (el.localName.includes('-')) {
       const ComponentClass = Component.components.get(el.localName);
       const component = new ComponentClass();
@@ -74,6 +75,16 @@ export class Component {
 
       const data = component.#initialMount(el, this);
       updatable.data = data;
+
+      let shouldBeInDom = true;
+      if (updatable.condition && !this[updatable.condition]()) {
+        shouldBeInDom = false;
+      }
+
+      if (shouldBeInDom) {
+        component.#setHandlers();
+        component.afterMount();
+      }
 
       this.#updatables.push(updatable);
       return;
@@ -120,36 +131,35 @@ export class Component {
     this.#element = createElement(template);
 
     this.#getPropsAndCallbacks(componentTag);
-    this.#prepareUpdatables();
-    this.#update(false);
+    this.#renderTree();
+    this.#addElementAttrs();
+    this.#update(true);
 
     componentTag.parentElement.replaceChild(this.#element, componentTag);
-
-    this.#setHandlers();
-    this.afterMount();
 
     return { ...this.#data, callback: this.callback, content: this.content };
   }
 
   #mount(parentComponent, placeData, data) {
     this.#parentComponent = parentComponent;
+    this.#data.props = data.props;
+    this.#data.dinamicProps = data.dinamicProps;
+    this.#data.attrs = data.attrs;
+    this.callback = data.callback;
+    this.content = data.content;
 
     const template = this.getTemplate();
     this.#element = createElement(template);
 
-    this.#data.props = data.props;
-    this.#data.dinamicProps = data.dinamicProps;
-    this.callback = data.callback;
-    this.content = data.content;
-
-    this.#prepareUpdatables();
-    this.#update(false);
+    this.#renderTree();
+    this.#addElementAttrs();
+    this.#update(true);
     this.#defunePositionAndMount(this.#element, this.#parentComponent.#element, placeData);
     this.#setHandlers();
     this.afterMount();
   }
 
-  #update(needTriggerLifeCycle = true) {
+  #update(isInitialUpdate = false) {
     this.#updateProps();
 
     this.#updatables.forEach(({
@@ -165,12 +175,12 @@ export class Component {
       
       if (Class) {
         if (condition === undefined) {
-          component.#update(needTriggerLifeCycle);
+          component.#update(isInitialUpdate);
         } else {
           const shouldBeInDom = this[condition]();
 
           if (shouldBeInDom && component) {
-            component.#update(needTriggerLifeCycle);
+            component.#update(isInitialUpdate);
           }
           if (shouldBeInDom && !component) {
             const component = new Class();
@@ -178,7 +188,13 @@ export class Component {
             currentUpdatable.component = component;
           }
           if (!shouldBeInDom && component) {
-            if (needTriggerLifeCycle) component.beforeUnmount();
+            if (isInitialUpdate) {
+              const componentElId = component.#element.getAttribute('id');
+              if (componentElId) currentUpdatable.data.attrs.push(['id', componentElId]);
+            } else {
+              component.beforeUnmount();
+            }
+
             component.#element.remove();
             currentUpdatable.component = null;
           }
@@ -206,7 +222,7 @@ export class Component {
       }
     });
 
-    if (needTriggerLifeCycle) this.afterUpdate(); 
+    if (!isInitialUpdate) this.afterUpdate(); 
   }
 
   #defunePositionAndMount(el, parent, placeData) {
@@ -224,6 +240,12 @@ export class Component {
         break;
       }
     }
+  }
+
+  #addElementAttrs() {
+    this.#data.attrs.forEach(([name, value]) => {
+      this.#element.setAttribute(name, value);
+    });
   }
 
   #updateProps() {
@@ -262,6 +284,11 @@ export class Component {
   #getPropsAndCallbacks(componentTag) {
     for (let i = 0; i < componentTag.attributes.length; i++) {
       const attr = componentTag.attributes[i];
+
+      if (attr.name === 'data-if' || attr.name === 'data-for') {
+        this.#data.attrs.push([attr.name, attr.value]);
+        continue;
+      }
 
       if (attr.name.startsWith(':')) {
         const propName = attr.name.slice(1, attr.name.length);
@@ -311,6 +338,14 @@ export class Component {
     const prevElHasNoIf = !prevElSibling.hasAttribute('data-if');
     const prevElHasNoFor = !prevElSibling.hasAttribute('data-for');
 
+    if (prevElHasNoIf && prevElHasNoFor) {
+      placeData.push({
+        container: prevElSibling,
+        position: RenderPosition.AFTEREND,
+      });
+      return;
+    }
+
     let id = '';
 
     if (!prevElSibling.hasAttribute('id')) {
@@ -318,14 +353,6 @@ export class Component {
       prevElSibling.setAttribute('id', id);
     } else {
       id = prevElSibling.getAttribute('id');
-    }
-
-    if (prevElHasNoIf && prevElHasNoFor) {
-      placeData.push({
-        container: id,
-        position: RenderPosition.AFTEREND,
-      });
-      return;
     }
 
     placeData.push({

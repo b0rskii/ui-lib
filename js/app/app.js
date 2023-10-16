@@ -15,6 +15,7 @@ export class App extends Component {
   };
 
   moreThanZero = () => this.state.count > 0;
+  moreThan1 = () => this.state.count > 1;
 
   getTemplate() {
     return /* html */`
@@ -33,6 +34,9 @@ export class App extends Component {
         >
           Reset
         </button-view>
+
+        <div data-if="moreThan1">Номер 1</div>
+        <div data-if="moreThan1">Номер 2</div>
 
         <counter-view class="main-page__item"></counter-view>
         <counter-view class="main-page__item"></counter-view>
