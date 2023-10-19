@@ -44,7 +44,7 @@ export class CounterView extends Component {
   getTemplate() {
     return /* html */`
       <div class="counter-view" :class="class">
-        <div class="counter-view__value" :content="count">
+        <div class="counter-view__value">
           {{ count }}
         </div>
         <div class="counter-view__buttons">

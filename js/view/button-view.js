@@ -19,7 +19,6 @@ export class ButtonView extends Component {
       <button
         class="button-view"
         :class="class"
-        :content="content"
         @click="handleClick"
       >
         {{ content }}

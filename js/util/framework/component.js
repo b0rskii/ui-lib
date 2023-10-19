@@ -94,6 +94,7 @@ export class Component {
 
     const updatable = {
       el,
+      data: [],
     };
 
     if (el.hasAttribute('data-if')) {
@@ -104,21 +105,31 @@ export class Component {
       isUpdatable = true;
     }
 
-    if (el.textContent.startsWith('{{')) {
+    const elInnerHTML = el.innerHTML.trim();
+
+    if (elInnerHTML.startsWith('{{')) {
+      const contentValue = elInnerHTML.slice(2, -2).trim();
+      updatable.data.push(['content', contentValue]);
       isUpdatable = true;
-    } else {
-      for (let i = 0; i < el.attributes.length; i++) {
-        const attr = el.attributes[i];
+    }
 
-        if (attr.name[0] === ':') {
-          isUpdatable = true;
-        }
+    for (let i = 0; i < el.attributes.length; i++) {
+      const attr = el.attributes[i];
 
-        if (attr.name[0] === '@') {
-          this.#markEventElement(el);
-        }
+      if (attr.name[0] === ':') {
+        updatable.data.push([attr.name.slice(1), attr.value]);
+        isUpdatable = true;
+        continue;
+      }
+
+      if (attr.name[0] === '@') {
+        this.#markEventElement(el);
       }
     }
+
+    updatable.data.forEach(([attrToRemoveName]) => {
+      el.removeAttribute(`:${attrToRemoveName}`);
+    });
 
     if (isUpdatable) this.#updatables.push(updatable);
   }
@@ -160,7 +171,7 @@ export class Component {
   }
 
   #update(isInitialUpdate = false) {
-    this.#updateProps();
+    this.#updateProps(isInitialUpdate);
 
     this.#updatables.forEach(({
       component,
@@ -204,12 +215,12 @@ export class Component {
       }
 
       if (condition === undefined) {
-        this.#updateAttrs(el);
+        this.#updateAttrs(el, data);
       } else {
         const shouldBeInDom = this[condition]();
 
         if (shouldBeInDom && elMounted) {
-          this.#updateAttrs(el);
+          this.#updateAttrs(el, data);
         }
         if (shouldBeInDom && !elMounted) {
           this.#defunePositionAndMount(el, this.#element, placeData);
@@ -248,37 +259,32 @@ export class Component {
     });
   }
 
-  #updateProps() {
-    this.#data.props.forEach(([key, value]) => this.props[key] = value);
+  #updateProps(isInitialUpdate) {
+    if (isInitialUpdate) {
+      this.#data.props.forEach(([key, value]) => this.props[key] = value);
+    }
 
     this.#data.dinamicProps.forEach(([key, value]) => {
       this.props[key] = this.#parentComponent.props[value] ?? this.#parentComponent.state[value];
     });
   }
 
-  #updateAttrs(el) {
-    for (let i = 0; i < el.attributes.length; i++) {
-      const attr = el.attributes[i];
-      
-      if (attr.name === ':content') {
-        const newContent = attr.value;
-        el.textContent = this.props[newContent] ?? this.state[newContent] ?? this[newContent];
-        continue;
+  #updateAttrs(el, data) {
+    data.forEach(([attrName, attrValue]) => {
+      if (attrName === 'content') {
+        el.textContent = this.props[attrValue] ?? this.state[attrValue] ?? this[attrValue];
+        return;
       }
 
-      if (attr.name === ':class') {
-        const addingClass = this.props[attr.value] ?? this.state[attr.value];
+      if (attrName === 'class') {
+        const addingClass = this.props[attrValue] ?? this.state[attrValue];
         if (addingClass.length) el.classList.add(addingClass);
-        continue;
+        return;
       }
 
-      if (attr.name.startsWith(':')) {
-        const newAttrName = attr.name.slice(1, attr.name.length);
-        const newAttrValue = this.props[attr.value] ?? this.state[attr.value];
-
-        el.setAttribute(newAttrName, newAttrValue);
-      }
-    }
+      const newAttrValue = this.props[attrValue] ?? this.state[attrValue];
+      el.setAttribute(attrName, newAttrValue);
+    });
   }
 
   #getPropsAndCallbacks(componentTag) {
